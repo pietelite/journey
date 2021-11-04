@@ -32,9 +32,11 @@ import edu.whimc.journey.spigot.navigation.LocationCell;
 import edu.whimc.journey.spigot.util.SpigotUtil;
 import edu.whimc.portals.Main;
 import edu.whimc.portals.Portal;
+import java.util.Collection;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Predicate;
+import java.util.stream.Collectors;
 import org.bukkit.Bukkit;
 import org.bukkit.World;
 import org.bukkit.plugin.Plugin;
@@ -147,6 +149,27 @@ public class WhimcPortalPort extends Port<LocationCell, World> implements Verifi
           .filter(Objects::nonNull)
           .forEach(session::registerPort);
     }
+  }
+
+  /**
+   * Make a collection of all ports that are possible from the WHIMC-Portal plugin.
+   *
+   * @return the ports
+   */
+  public static Collection<WhimcPortalPort> makeAllPorts() {
+    return Portal.getPortals().stream()
+        .filter(portal -> portal.getDestination() != null)
+        .filter(portal -> portal.getWorld() != null)
+        .filter(portal -> portal.getDestination().getLocation().getWorld() != null)
+        .map(portal -> {
+          try {
+            return WhimcPortalPort.from(portal);
+          } catch (Exception e) {
+            return null;
+          }
+        })
+        .filter(Objects::nonNull)
+        .collect(Collectors.toList());
   }
 
   @Override

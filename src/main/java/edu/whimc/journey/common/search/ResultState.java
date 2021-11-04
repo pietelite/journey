@@ -71,6 +71,7 @@ public enum ResultState {
    */
   public boolean isSuccessful() {
     return this == STOPPED_SUCCESSFUL
+        || this == CANCELING_SUCCESSFUL
         || this == RUNNING_SUCCESSFUL;
   }
 

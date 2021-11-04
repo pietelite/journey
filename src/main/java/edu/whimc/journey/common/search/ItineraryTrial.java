@@ -87,7 +87,6 @@ public class ItineraryTrial<T extends Cell<T, D>, D> implements Resulted {
     boolean failed = false;
     boolean changedProblem = false;
     for (PathTrial<T, D> pathTrial : alternatingList.getMinors()) {
-
       if (session.state.isCanceled()) {
         state = ResultState.STOPPED_CANCELED;
         JourneyCommon.<T, D>getSearchEventDispatcher().dispatch(

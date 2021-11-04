@@ -28,7 +28,6 @@ import edu.whimc.journey.common.data.DataAccessException;
 import edu.whimc.journey.spigot.JourneySpigot;
 import edu.whimc.journey.spigot.command.common.CommandNode;
 import edu.whimc.journey.spigot.command.common.Parameter;
-import edu.whimc.journey.spigot.command.common.PlayerCommandNode;
 import edu.whimc.journey.spigot.navigation.LocationCell;
 import edu.whimc.journey.spigot.util.Format;
 import edu.whimc.journey.spigot.util.Permissions;
@@ -37,7 +36,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import org.bukkit.command.Command;
-import org.bukkit.entity.Player;
+import org.bukkit.command.CommandSender;
 import org.bukkit.util.ChatPaginator;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -45,7 +44,7 @@ import org.jetbrains.annotations.Nullable;
 /**
  * A command to list public search endpoints.
  */
-public class JourneyListPublicCommand extends PlayerCommandNode {
+public class JourneyListPublicCommand extends CommandNode {
 
   /**
    * General constructor.
@@ -67,22 +66,22 @@ public class JourneyListPublicCommand extends PlayerCommandNode {
   }
 
   @Override
-  public boolean onWrappedPlayerCommand(@NotNull Player player,
-                                        @NotNull Command command,
-                                        @NotNull String label,
-                                        @NotNull String[] args,
-                                        @NotNull Map<String, String> flags) throws DataAccessException {
+  public boolean onWrappedCommand(@NotNull CommandSender sender,
+                                  @NotNull Command command,
+                                  @NotNull String label,
+                                  @NotNull String[] args,
+                                  @NotNull Map<String, String> flags) throws DataAccessException {
     int pageNumber;
     if (args.length > 0) {
       try {
         pageNumber = Integer.parseInt(args[0]);
 
         if (pageNumber < 0) {
-          player.spigot().sendMessage(Format.error("The page number may not be negative!"));
+          sender.spigot().sendMessage(Format.error("The page number may not be negative!"));
           return false;
         }
       } catch (NumberFormatException e) {
-        player.spigot().sendMessage(Format.error("The page number must be an integer."));
+        sender.spigot().sendMessage(Format.error("The page number must be an integer."));
         return false;
       }
     } else {
@@ -95,7 +94,7 @@ public class JourneyListPublicCommand extends PlayerCommandNode {
         .getPublicEndpoints();
 
     if (cells.isEmpty()) {
-      player.spigot().sendMessage(Format.warn("There are no saved server locations yet!"));
+      sender.spigot().sendMessage(Format.warn("There are no saved server locations yet!"));
       return true;
     }
 
@@ -117,11 +116,11 @@ public class JourneyListPublicCommand extends PlayerCommandNode {
 
     pageNumber = Math.min(pageNumber, chatPage.getTotalPages());
 
-    player.spigot().sendMessage(Format.success("Server Locations - Page ",
+    sender.spigot().sendMessage(Format.success("Server Locations - Page ",
         Format.toPlain(Format.note(Integer.toString(pageNumber))),
         " of ",
         Format.toPlain(Format.note(Integer.toString(chatPage.getTotalPages())))));
-    Arrays.stream(chatPage.getLines()).forEach(player::sendMessage);
+    Arrays.stream(chatPage.getLines()).forEach(sender::sendMessage);
 
     return true;
   }

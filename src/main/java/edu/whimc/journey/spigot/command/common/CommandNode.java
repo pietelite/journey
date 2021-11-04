@@ -30,6 +30,7 @@ import edu.whimc.journey.common.data.DataAccessException;
 import edu.whimc.journey.common.util.Extra;
 import edu.whimc.journey.spigot.JourneySpigot;
 import edu.whimc.journey.spigot.util.Format;
+import java.text.DecimalFormat;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -39,7 +40,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import lombok.Getter;
-import lombok.Setter;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -70,8 +70,6 @@ public abstract class CommandNode implements CommandExecutor, TabCompleter {
    * A flag to say whether this command can ignore the regular barrier of waiting for
    * initialization to complete.
    */
-  @Setter
-  @Getter
   private boolean canBypassInvalid = false;
 
   /**
@@ -285,8 +283,10 @@ public abstract class CommandNode implements CommandExecutor, TabCompleter {
                                  @NotNull String label,
                                  @NotNull String[] args) {
 
-    if (!JourneySpigot.getInstance().isValid() && !canBypassInvalid) {
-      sender.spigot().sendMessage(Format.warn("The Journey plugin is still initializing..."));
+    if (!JourneySpigot.getInstance().isInitializing() && !canBypassInvalid) {
+      sender.spigot().sendMessage(Format.warn("The Journey plugin is still initializing ("
+          + Math.round(JourneySpigot.getInstance().getInitializedPortion() * 100)
+          + "%)"));
       return false;
     }
 
@@ -336,6 +336,14 @@ public abstract class CommandNode implements CommandExecutor, TabCompleter {
                             @NotNull String label,
                             @NotNull String[] actualArgs,
                             @NotNull Map<String, String> flags) {
+
+    if (!JourneySpigot.getInstance().isInitializing() && !canBypassInvalid) {
+      sender.spigot().sendMessage(Format.warn("The Journey plugin is still initializing ("
+          + new DecimalFormat("##.##").format(JourneySpigot.getInstance().getInitializedPortion() * 100)
+          + "%)"));
+      return false;
+    }
+
     if (this.permission != null && !sender.hasPermission(this.permission)) {
       sender.spigot().sendMessage(Format.error("You don't have permission to do this!"));
       return false;
@@ -424,6 +432,10 @@ public abstract class CommandNode implements CommandExecutor, TabCompleter {
     StringUtil.copyPartialMatches(args[args.length - 1], allPossible, out);
     Collections.sort(out);
     return out;
+  }
+
+  public void setCanBypassInvalid(boolean canBypassInvalid) {
+    this.canBypassInvalid = canBypassInvalid;
   }
 
 }

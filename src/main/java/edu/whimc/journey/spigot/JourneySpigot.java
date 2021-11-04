@@ -27,16 +27,29 @@ package edu.whimc.journey.spigot;
 import edu.whimc.journey.common.JourneyCommon;
 import edu.whimc.journey.common.cache.PathCache;
 import edu.whimc.journey.common.data.DataManager;
+import edu.whimc.journey.common.navigation.Mode;
+import edu.whimc.journey.common.navigation.ModeType;
+import edu.whimc.journey.common.navigation.ModeTypeGroup;
+import edu.whimc.journey.common.navigation.Port;
+import edu.whimc.journey.common.search.PathTrial;
+import edu.whimc.journey.common.search.SearchSession;
 import edu.whimc.journey.common.search.event.SearchDispatcher;
 import edu.whimc.journey.common.search.event.SearchEvent;
 import edu.whimc.journey.spigot.command.JourneyCommand;
 import edu.whimc.journey.spigot.command.common.CommandNode;
 import edu.whimc.journey.spigot.config.SpigotConfigManager;
 import edu.whimc.journey.spigot.data.SpigotDataManager;
+import edu.whimc.journey.spigot.external.whimcportals.WhimcPortalPort;
 import edu.whimc.journey.spigot.manager.DebugManager;
 import edu.whimc.journey.spigot.manager.NetherManager;
 import edu.whimc.journey.spigot.manager.PlayerSearchManager;
 import edu.whimc.journey.spigot.navigation.LocationCell;
+import edu.whimc.journey.spigot.navigation.mode.ClimbMode;
+import edu.whimc.journey.spigot.navigation.mode.DoorMode;
+import edu.whimc.journey.spigot.navigation.mode.FlyMode;
+import edu.whimc.journey.spigot.navigation.mode.JumpMode;
+import edu.whimc.journey.spigot.navigation.mode.SwimMode;
+import edu.whimc.journey.spigot.navigation.mode.WalkMode;
 import edu.whimc.journey.spigot.search.event.SpigotFoundSolutionEvent;
 import edu.whimc.journey.spigot.search.event.SpigotIgnoreCacheSearchEvent;
 import edu.whimc.journey.spigot.search.event.SpigotModeFailureEvent;
@@ -54,11 +67,21 @@ import edu.whimc.journey.spigot.search.listener.DataStorageListener;
 import edu.whimc.journey.spigot.search.listener.PlayerSearchListener;
 import edu.whimc.journey.spigot.util.LoggerSpigot;
 import edu.whimc.journey.spigot.util.Serialize;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+import java.util.stream.Collectors;
 import lombok.Getter;
 import org.bukkit.Bukkit;
 import org.bukkit.World;
 import org.bukkit.command.PluginCommand;
 import org.bukkit.event.Event;
+import org.bukkit.generator.WorldInfo;
 import org.bukkit.permissions.Permission;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -80,7 +103,9 @@ public final class JourneySpigot extends JavaPlugin {
   @Getter
   private PlayerSearchManager searchManager;
   @Getter
-  private boolean valid = false;
+  private boolean initializing = false;
+  @Getter
+  private float initializedPortion = 0;
 
   // Database
   @Getter
@@ -160,8 +185,10 @@ public final class JourneySpigot extends JavaPlugin {
 
     // Start doing a bunch of searches for common use cases
     Bukkit.getScheduler().runTaskAsynchronously(this, () -> {
-      // TODO initialize likely-used paths here (link to link)
-      valid = true;
+      // TODO in order for initialization to work, we probably need to use a database because
+      //  all of the path data probably cannot all be stored in memory. Untested, though!
+//      initializeCacheables();
+      initializing = true;
       JourneySpigot.getInstance().getLogger().info("Finished initializing Journey");
     });
   }
@@ -206,6 +233,82 @@ public final class JourneySpigot extends JavaPlugin {
         manager -> this.netherManager = manager,
         NetherManager::new);
     JourneySpigot.getInstance().getLogger().info(this.netherManager.size() + " nether ports serialized");
+  }
+
+  private void initializeCacheables() {
+
+    List<Port<LocationCell, World>> allPorts = new LinkedList<>();
+    allPorts.addAll(this.netherManager.makePorts());
+    allPorts.addAll(WhimcPortalPort.makeAllPorts());
+
+    Set<UUID> allWorlds = Bukkit.getWorlds().stream().map(WorldInfo::getUID).collect(Collectors.toSet());
+
+    Map<UUID, List<Port<LocationCell, World>>> allPortsIntoWorld = new HashMap<>();
+    Map<UUID, List<Port<LocationCell, World>>> allPortsOutOfWorld = new HashMap<>();
+
+    // Set up all the lists
+    for (UUID uuid : allWorlds) {
+      allPortsIntoWorld.put(uuid, new LinkedList<>());
+      allPortsOutOfWorld.put(uuid, new LinkedList<>());
+    }
+
+    // Add ports
+    allPorts.forEach(port -> {
+      allPortsIntoWorld.get(port.getDestination().getDomain().getUID()).add(port);
+      allPortsOutOfWorld.get(port.getOrigin().getDomain().getUID()).add(port);
+    });
+
+    // Find how many calculations we'll be doing
+    double calculations = 0;
+    for (UUID uuid : allWorlds) {
+      calculations += allPortsIntoWorld.get(uuid).size() * allPortsOutOfWorld.get(uuid).size();
+    }
+
+    SearchSession<LocationCell, World> session = SearchSession.dummy();
+    PathTrial<LocationCell, World> pathTrial;
+    ModeTypeGroup modeTypeGroup1 = new ModeTypeGroup(List.of(ModeType.WALK,
+        ModeType.JUMP,
+        ModeType.SWIM,
+        ModeType.DOOR,
+        ModeType.CLIMB));
+    Collection<Mode<LocationCell, World>> modes1 = List.of(new WalkMode(session, Collections.emptySet()),
+        new JumpMode(session, Collections.emptySet()),
+        new SwimMode(session, Collections.emptySet()),
+        new DoorMode(session, Collections.emptySet()),
+        new ClimbMode(session, Collections.emptySet()));
+    ModeTypeGroup modeTypeGroup2 = new ModeTypeGroup(List.of(ModeType.WALK,
+        ModeType.JUMP,
+        ModeType.SWIM,
+        ModeType.DOOR,
+        ModeType.CLIMB,
+        ModeType.FLY));
+    Collection<Mode<LocationCell, World>> modes2 = List.of(new FlyMode(session, Collections.emptySet()),
+        new WalkMode(session, Collections.emptySet()),
+        new JumpMode(session, Collections.emptySet()),
+        new SwimMode(session, Collections.emptySet()),
+        new DoorMode(session, Collections.emptySet()),
+        new ClimbMode(session, Collections.emptySet()));
+
+    final double oneCalculationPortion = 1d / calculations;
+    for (UUID uuid : allWorlds) {
+      for (Port<LocationCell, World> startingPort : allPortsIntoWorld.get(uuid)) {
+        for (Port<LocationCell, World> endingPort : allPortsOutOfWorld.get(uuid)) {
+          if (!startingPort.equals(endingPort)) {
+            if (!JourneyCommon.<LocationCell, World>getPathCache().contains(startingPort.getDestination(),
+                endingPort.getOrigin(),
+                modeTypeGroup1)) {
+              PathTrial.approximate(SearchSession.dummy(), startingPort.getDestination(), endingPort.getOrigin()).attempt(modes1, false);
+            }
+            if (!JourneyCommon.<LocationCell, World>getPathCache().contains(startingPort.getDestination(),
+                endingPort.getOrigin(),
+                modeTypeGroup2)) {
+              PathTrial.approximate(SearchSession.dummy(), startingPort.getDestination(), endingPort.getOrigin()).attempt(modes2, false);
+            }
+          }
+          initializedPortion += oneCalculationPortion;
+        }
+      }
+    }
   }
 
 }

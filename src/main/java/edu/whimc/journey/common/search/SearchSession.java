@@ -57,6 +57,18 @@ public abstract class SearchSession<T extends Cell<T, D>, D> implements Resulted
   }
 
   /**
+   * Get a dummy search session that, when run, doesn't do anything.
+   * This can be used as a placeholder for doing lower level operations that require a session.
+   *
+   * @param <T> the location type
+   * @param <D> the domain type
+   * @return a dummy search session
+   */
+  public static <T extends Cell<T, D>, D> SearchSession<T, D> dummy() {
+    return new DummySearchSession<>();
+  }
+
+  /**
    * Perform the titular search operation.
    */
   public abstract void search();
@@ -200,6 +212,26 @@ public abstract class SearchSession<T extends Cell<T, D>, D> implements Resulted
    */
   public enum Caller {
     PLAYER,
-    OTHER
+    OTHER,
+    DUMMY
   }
+
+  private static class DummySearchSession<T extends Cell<T, D>, D> extends SearchSession<T, D> {
+
+    protected DummySearchSession() {
+      super(UUID.randomUUID(), Caller.DUMMY);
+    }
+
+    @Override
+    public void search() {
+
+    }
+
+    @Override
+    public long executionTime() {
+      return 0;
+    }
+
+  }
+
 }

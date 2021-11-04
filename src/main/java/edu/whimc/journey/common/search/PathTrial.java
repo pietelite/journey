@@ -138,7 +138,7 @@ public class PathTrial<T extends Cell<T, D>, D> extends FlexiblePathTrial<T, D> 
                                                                  T origin, T destination,
                                                                  Path<T, D> path) {
     return new PathTrial<>(session, origin, destination,
-        path == null ? origin.distanceTo(destination) : path.getLength(), path,
+        path == null ? Double.MAX_VALUE : path.getLength(), path,
         path == null ? ResultState.STOPPED_FAILED : ResultState.STOPPED_SUCCESSFUL,
         true);
   }

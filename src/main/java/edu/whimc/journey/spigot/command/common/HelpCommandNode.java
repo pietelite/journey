@@ -58,7 +58,9 @@ final class HelpCommandNode extends CommandNode {
     sender.spigot().sendMessage(Format.success(
         "Command: ["
             + ChatColor.GRAY
-            + parent.getFullCommand() + "]"));
+            + parent.getFullCommand()
+            + Format.SUCCESS
+            + "]"));
     sender.spigot().sendMessage(Format.success(
         "Description: "
         + ChatColor.GRAY
