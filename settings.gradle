@@ -1,1 +1,6 @@
-rootProject.name = 'journey'
+rootProject.name = 'Journey'
+include (
+        'common',
+        'spigot',
+        'spigot-api',
+)

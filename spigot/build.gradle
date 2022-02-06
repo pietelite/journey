@@ -1,0 +1,82 @@
+plugins {
+    id 'java'
+    id 'maven-publish'
+    id 'com.github.johnrengelman.shadow' version '7.0.0'
+}
+
+repositories {
+    maven {
+        name = 'spigotmc-repo'
+        url = 'https://hub.spigotmc.org/nexus/content/repositories/snapshots/'
+    }
+    maven {
+        name = 'sonatype'
+        url = 'https://oss.sonatype.org/content/groups/public/'
+    }
+    flatDir {
+        dirs 'libs'
+    }
+    maven {
+        name = 'jitpack.io'
+        url = 'https://jitpack.io'
+    }
+}
+
+dependencies {
+    implementation project(':common')
+    implementation project(':spigot-api')
+    // Spigot
+    shadow 'org.spigotmc:spigot-api:1.17.1-R0.1-SNAPSHOT'
+
+    // Tests
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.8.2'
+    testImplementation 'com.google.guava:guava:31.0.1-jre'
+
+    // Annotations
+    shadow 'org.jetbrains:annotations:22.0.0'
+    testImplementation 'org.jetbrains:annotations:22.0.0'
+
+    // Other plugins
+    shadow 'com.github.PikaMug:Quests:4.0.7'
+    shadow 'com.github.whimc:Portals:2.8.3'
+
+    // Lombok
+    shadow 'org.projectlombok:lombok:1.18.22'
+    testImplementation('org.projectlombok:lombok:1.18.22')
+    annotationProcessor 'org.projectlombok:lombok:1.18.22'
+    testAnnotationProcessor 'org.projectlombok:lombok:1.18.22'
+
+    implementation 'javax.visrec:visrec-api:1.0.5'
+    implementation 'com.opencsv:opencsv:5.5.2'
+
+    implementation 'org.bstats:bstats-bukkit:3.0.0'
+
+}
+
+shadowJar {
+    archiveFileName = "Journey-Spigot-${project.version}.jar"
+
+    dependencies {
+        exclude(dependency('org.projectlombok:lombok'))
+    }
+
+    relocate 'org.bstats', 'dev.pietelite.bstats'
+}
+
+processResources {
+    filesMatching('plugin.yml') {
+        expand 'version': version
+    }
+}
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            artifactId = 'journey'
+            groupId = project.group
+            version = project.version
+
+            from components.java
+        }
+    }
+}

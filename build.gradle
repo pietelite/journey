@@ -1,83 +1,39 @@
 plugins {
-    id 'java'
-    id 'maven-publish'
+    id 'org.cadixdev.licenser' version '0.6.1' apply false
 }
 
-group = 'edu.whimc'
-version = '0.1.1-beta'
+defaultTasks 'licenseFormat', 'build'
 
-repositories {
-    mavenCentral()
-    maven {
-        name = 'spigotmc-repo'
-        url = 'https://hub.spigotmc.org/nexus/content/repositories/snapshots/'
+subprojects {
+    apply plugin: 'java'
+    apply plugin: 'maven-publish'
+    apply plugin: 'org.cadixdev.licenser'
+
+    group = 'dev.pietelite'
+    version = '0.2.0-BETA'
+
+    sourceCompatibility = 1.8
+    targetCompatibility = 1.8
+
+    tasks.withType(JavaCompile) {
+        options.encoding = 'UTF-8'
     }
-    maven {
-        name = 'sonatype'
-        url = 'https://oss.sonatype.org/content/groups/public/'
+
+    jar {
+        from '../LICENSE.txt'
     }
-    flatDir {
-        dirs 'libs'
+
+    license {
+        header = rootProject.file('HEADER.txt')
+        include '**/*.java'
+        newLine = true
     }
-    maven {
-        name = 'jitpack.io'
-        url = 'https://jitpack.io'
+
+    repositories {
+        mavenCentral()
     }
-}
 
-compileJava {
-    sourceCompatibility = 8
-    targetCompatibility = 8
-}
-
-test {
-    useJUnitPlatform()
-}
-
-dependencies {
-    // Spigot
-    implementation 'org.spigotmc:spigot-api:1.17.1-R0.1-SNAPSHOT'
-
-    // Tests
-    testImplementation 'org.junit.jupiter:junit-jupiter:5.8.1'
-    testImplementation 'com.google.guava:guava:31.0.1-jre'
-
-    // Annotations
-    implementation 'org.jetbrains:annotations:22.0.0'
-    testImplementation 'org.jetbrains:annotations:22.0.0'
-
-    // Other plugins
-    implementation 'com.github.PikaMug:Quests:4.0.7'
-    implementation 'com.github.whimc:Portals:2.8.3'
-
-    // Lombok
-    implementation 'org.projectlombok:lombok:1.18.22'
-    testImplementation('org.projectlombok:lombok:1.18.22')
-    annotationProcessor 'org.projectlombok:lombok:1.18.22'
-    testAnnotationProcessor 'org.projectlombok:lombok:1.18.22'
-
-    implementation fileTree(dir: 'libs', include: '*.jar')
-
-    implementation 'javax.visrec:visrec-api:1.0.5'
-
-    implementation 'com.opencsv:opencsv:5.5.2'
-
-}
-
-processResources {
-    filesMatching('plugin.yml') {
-        expand 'version': version
-    }
-}
-
-publishing {
-    publications {
-        mavenJava(MavenPublication) {
-            groupId = 'edu.whimc'
-            artifactId = 'journey'
-            version = '0.1.0-beta'
-
-            from components.java
-        }
+    test {
+        useJUnitPlatform()
     }
 }
